@@ -1,7 +1,10 @@
 require 'byebug'
-class Tile
+require 'yaml'
 
-  DELTAS = [[0,1], [0, -1], [1,0], [-1,0], [1,1], [1,-1], [-1,1], [-1,-1]]
+
+class Tile
+  DELTAS = [[0, 1], [0, -1], [1, 0], [-1, 0],
+            [1, 1], [1, -1], [-1, 1], [-1, -1]]
 
   attr_accessor :visual, :board, :neighbors
 
@@ -10,7 +13,7 @@ class Tile
     @visual = "*"
     @bomb = false
     @board = board
-    @revealed = []
+    # @revealed = []
   end
 
   def reveal
@@ -34,30 +37,6 @@ class Tile
 
   end
 
-  # def reveal_helper
-
-    # get_neighbors(@pos)
-    # queue = []
-    # queue << self
-    #
-    # until queue.empty?
-    #   current = queue.shift
-    #   current.reveal
-    #   @revealed << current
-    #
-    #   current.neighbors.each do |neighbor|
-    #
-    #     unless neighbor.has_bomb? || @revealed.include?(neighbor)
-    #       # neighbor.reveal
-    #       queue << neighbor
-    #     end
-    #
-    #   end
-    #
-    # end
-
-  # end
-
   def neigh_bomb_count
     count = 0
     @neighbors.each do |neighbor|
@@ -70,10 +49,12 @@ class Tile
     @neighbors = []
     px, py = pos
     DELTAS.each do |dx, dy|
-      new_x, new_y = px+dx, py+dy
-      next unless [new_x, new_y].all?{|x| x.between?(0, @board.num_tiles-1)}
+      new_x, new_y = px + dx, py + dy
+      next unless [new_x, new_y].all? do |x|
+        x.between?(0, @board.num_tiles - 1)
+      end
       neighbor = @board.tiles[new_x][new_y]
-      @neighbors << neighbor if neighbor.is_a?(Tile)
+      @neighbors << neighbor
     end
 
     @neighbors
@@ -92,8 +73,9 @@ end
 class Board
   attr_reader :tiles, :board, :num_tiles, :revealed_tiles, :bombs
 
-  def initialize(num_tiles = 9)
-    @tiles = Array.new(num_tiles) {Array.new(num_tiles)}
+  def initialize(num_tiles)
+    @tiles = Array.new(num_tiles) { Array.new(num_tiles) }
+    make_tiles
     @num_tiles = num_tiles
     @revealed_tiles = []
     @board
@@ -102,11 +84,11 @@ class Board
   def make_tiles
     @tiles.each_with_index do |row, x|
       row.each_with_index do |tile, y|
-        @tiles[x][y] = Tile.new(self, [x,y])
+        @tiles[x][y] = Tile.new(self, [x, y])
       end
-
     end
-    true
+
+    nil
   end
 
   def show_board
@@ -116,7 +98,8 @@ class Board
       end
       puts
     end
-    true
+
+    nil
   end
 
   def populate_bombs(bombs)
@@ -137,25 +120,39 @@ end
 
 class Minesweeper
   attr_reader :board
+
   def initialize(num_tiles = 9)
     @num_tiles = num_tiles
-  end
-
-  def generate_board
     @board = Board.new(@num_tiles)
   end
 
   def run
-    generate_board
-    @board.make_tiles
     @board.populate_bombs(@num_tiles)
+    load_game_option || play
+  end
 
+  def play
     until over?
       @board.show_board
       get_move
     end
 
     puts (won? ? "You win!" : "You lose!")
+  end
+
+  def save_game_option
+    File.open('minesweeper.yml', 'w') do |f|
+      f.puts self.to_yaml
+    end
+  end
+
+  def load_game_option
+    puts "Do you want to load a game? (y/n)"
+    input = gets.chomp
+    if input == 'y'
+      contents = YAML.load_file('minesweeper.yml')
+      contents.play
+    end
   end
 
   def over?
@@ -165,7 +162,7 @@ class Minesweeper
   def lost?
     over = false
     @board.tiles.each do |row|
-      over = row.any? {|tile| tile.visual == 'X'}
+      over = row.any? { |tile| tile.visual == 'X' }
       break if over
     end
 
@@ -186,27 +183,31 @@ class Minesweeper
   end
 
   def get_move
-    print 'Enter position:'
+    print 'Enter position: (Enter save to save game)'
     pos = gets.chomp
-    flag = pos[0] == 'f' ? true : false
+    if pos == 'save'
+      save_game_option
 
-    if flag
-      coord = pos[1..-1].strip.split(',')
+      return
+    end
+
+    if pos[0] == 'f'
+      coord = pos[1..-1].strip.split(',').map(&:to_i)
       place_flag(coord)
     else
-      coord = pos.strip.split(',')
-      x,y = coord
-      @board.tiles[x.to_i][y.to_i].reveal
+      coord = pos.strip.split(',').map(&:to_i)
+      x, y = coord
+      @board.tiles[x][y].reveal
     end
 
   end
 
   def place_flag(coord)
-    x,y = coord
-    tile = @board.tiles[x.to_i][y.to_i]
+    x, y = coord
+    tile = @board.tiles[x][y]
     tile.visual = tile.visual == 'F' ? '*' : 'F'
   end
 
 end
 
-Minesweeper.new(9).run
+Minesweeper.new.run
