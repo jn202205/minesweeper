@@ -102,6 +102,16 @@ class Board
     nil
   end
 
+  def display_bombs
+    @tiles.each do |row|
+      row.each do |tile|
+         tile.visual = 'X' if tile.has_bomb?
+      end
+    end
+
+    show_board
+  end
+
   def populate_bombs(bombs)
     @bombs = bombs
 
@@ -137,6 +147,7 @@ class Minesweeper
       get_move
     end
 
+    @board.display_bombs
     puts (won? ? "You win!" : "You lose!")
   end
 
