@@ -194,11 +194,13 @@ class Minesweeper
   end
 
   def get_move
-    print 'Enter position: (Enter save to save game)'
+    print 'Enter position: (Enter "save"/"quit" to save/quit game)'
     pos = gets.chomp
     if pos == 'save'
       save_game_option
-
+      return
+    elsif pos == 'quit'
+      Kernel.exit(1)
       return
     end
 
