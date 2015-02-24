@@ -38,11 +38,7 @@ class Tile
   end
 
   def neigh_bomb_count
-    count = 0
-    @neighbors.each do |neighbor|
-      count += 1 if neighbor.has_bomb?
-    end
-    count
+    @neighbors.select(&:has_bomb?).count
   end
 
   def get_neighbors(pos)
@@ -223,4 +219,6 @@ class Minesweeper
 
 end
 
-Minesweeper.new.run
+if __FILE__ == $PROGRAM_NAME
+  Minesweeper.new.run
+end
